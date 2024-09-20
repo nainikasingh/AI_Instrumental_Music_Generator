@@ -1,0 +1,135 @@
+import glob
+from music21 import stream, note, chord
+import music21 as m21
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras import layers
+import random
+from tensorflow import keras
+
+# Load the model
+model = keras.models.load_model('music_composer_model_01.keras')
+
+sequence_length = 50
+
+with open(r"C:\Users\Nano\Downloads\newdataset", 'r') as f:
+    notes = [line.strip() for line in f.readlines()]
+
+# Get unique notes and create a mapping to integers
+unique_notes = sorted(list(set(notes)))
+note_to_int = {note: number for number, note in enumerate(unique_notes)}
+# Generate input sequences (X) and output notes (y)
+input_sequences = []
+output_notes = []
+
+for i in range(len(notes) - sequence_length):
+    seq_in = notes[i:i + sequence_length]
+    seq_out = notes[i + sequence_length]
+    input_sequences.append([note_to_int[note] for note in seq_in])
+    output_notes.append(note_to_int[seq_out])
+
+# Reshape X and normalize it
+X = np.reshape(input_sequences, (len(input_sequences), sequence_length, 1))
+X = X / float(len(unique_notes))  # Normalize the values
+
+def generate_music(model, num_notes):
+    start = random.randint(0, len(input_sequences) - 1)  # Choose a random start sequence
+    pattern = input_sequences[start]
+    generated_notes = []
+
+    for note_index in range(num_notes):
+        input_seq = np.reshape(pattern, (1, len(pattern), 1))
+        input_seq = input_seq / float(len(unique_notes))  # Normalize
+
+        prediction = model.predict(input_seq, verbose=0)
+        index = np.argmax(prediction)
+        result_note = unique_notes[index]
+        generated_notes.append(result_note)
+
+        # Update the pattern to include the generated note
+        pattern.append(index)
+        pattern = pattern[1:]  # Slide the window
+
+    return generated_notes
+
+def notes_to_midi(generated_notes, output_file='generated_music_01.mid'):
+    output_stream = stream.Stream()
+
+    for item in generated_notes:
+        if '.' in item:  # Check if it's a chord
+            notes_in_chord = item.split('.')
+            chord_notes = [note.Note(int(n)) for n in notes_in_chord]
+            new_chord = chord.Chord(chord_notes)
+            output_stream.append(new_chord)
+        else:
+            new_note = note.Note(item)
+            output_stream.append(new_note)
+
+    # Save the stream to a MIDI file
+    output_stream.write('midi', fp=output_file)
+    print(f"MIDI file saved as {output_file}")
+
+# Generate a sequence of notes
+num_notes_to_generate = 50
+generated_music = generate_music(model, num_notes_to_generate)
+
+# Convert the generated notes back to MIDI format
+notes_to_midi(generated_music)
+
+# Print the generated notes
+print("Generated Notes:", generated_music)
+
+def visualize_midi(output_file='generated_music_01.mid'):
+    score = stream.Score()
+    midi_stream = stream.parse(output_file)
+    score.append(midi_stream)
+    score.show('text')  # Display as text, can also use 'musicxml' for better visual representation
+
+# Visualize the saved MIDI file
+visualize_midi()# Load the model
+model = keras.models.load_model('music_composer_model_01.keras')
+
+sequence_length = 50
+
+with open(r"C:\Users\Nano\Downloads\newdataset", 'r') as f:
+    notes = [line.strip() for line in f.readlines()]
+
+# Get unique notes and create a mapping to integers
+unique_notes = sorted(list(set(notes)))
+note_to_int = {note: number for number, note in enumerate(unique_notes)}
+# Generate input sequences (X) and output notes (y)
+input_sequences = []
+output_notes = []
+
+for i in range(len(notes) - sequence_length):
+    seq_in = notes[i:i + sequence_length]
+    seq_out = notes[i + sequence_length]
+    input_sequences.append([note_to_int[note] for note in seq_in])
+    output_notes.append(note_to_int[seq_out])
+
+# Reshape X and normalize it
+X = np.reshape(input_sequences, (len(input_sequences), sequence_length, 1))
+X = X / float(len(unique_notes))  # Normalize the values
+
+def generate_music(model, num_notes):
+    start = random.randint(0, len(input_sequences) - 1)  # Choose a random start sequence
+    pattern = input_sequences[start]
+    generated_notes = []
+
+    for note_index in range(num_notes):
+        input_seq = np.reshape(pattern, (1, len(pattern), 1))
+        input_seq = input_seq / float(len(unique_notes))  # Normalize
+
+        prediction = model.predict(input_seq, verbose=0)
+        index = np.argmax(prediction)
+        result_note = unique_notes[index]
+        generated_notes.append(result_note)
+
+        # Update the pattern to include the generated note
+        pattern.append(index)
+        pattern = pattern[1:]  # Slide the window
+
+    return generated_notes
+
+# Print the generated notes
+print("Generated Notes:", generated_music)
